@@ -85,6 +85,7 @@ jobs:
           cd %TBUILD%\AyuGramDesktop\Telegram
           call configure.bat ^
             qt6 ^
+            x64 ^
             -D TDESKTOP_API_TEST=ON ^
             -D CMAKE_CONFIGURATION_TYPES=Debug ^
             -D DESKTOP_APP_DISABLE_AUTOUPDATE=OFF ^
