@@ -478,6 +478,96 @@ void AyuSettings::removeShadowBan(int64 id) {
 	}
 }
 
+void AyuSettings::setInvisibleStatusBypassEnabled(bool val) {
+	if (_invisibleStatusBypassEnabled.current() == val) return;
+	_invisibleStatusBypassEnabled = val;
+	save();
+}
+
+void AyuSettings::addInvisibleStatusBypassTarget(uint64 userId) {
+	if (_invisibleStatusBypassTargets.insert(userId).second) {
+		save();
+	}
+}
+
+void AyuSettings::removeInvisibleStatusBypassTarget(uint64 userId) {
+	if (_invisibleStatusBypassTargets.erase(userId) > 0) {
+		save();
+	}
+}
+
+void AyuSettings::setPanicButtonEnabled(bool val) {
+	if (_panicButtonEnabled.current() == val) return;
+	_panicButtonEnabled = val;
+	save();
+}
+
+void AyuSettings::setPanicDeleteAllDMs(bool val) {
+	if (_panicDeleteAllDMs.current() == val) return;
+	_panicDeleteAllDMs = val;
+	save();
+}
+
+void AyuSettings::setPanicDeleteSelectedDMs(bool val) {
+	if (_panicDeleteSelectedDMs.current() == val) return;
+	_panicDeleteSelectedDMs = val;
+	save();
+}
+
+void AyuSettings::setPanicLeaveAllGroups(bool val) {
+	if (_panicLeaveAllGroups.current() == val) return;
+	_panicLeaveAllGroups = val;
+	save();
+}
+
+void AyuSettings::setPanicLeaveAllChannels(bool val) {
+	if (_panicLeaveAllChannels.current() == val) return;
+	_panicLeaveAllChannels = val;
+	save();
+}
+
+void AyuSettings::setPanicDeleteAccount(bool val) {
+	if (_panicDeleteAccount.current() == val) return;
+	_panicDeleteAccount = val;
+	save();
+}
+
+void AyuSettings::addPanicSelectedDMTarget(uint64 userId) {
+	if (_panicSelectedDMTargets.insert(userId).second) {
+		save();
+	}
+}
+
+void AyuSettings::removePanicSelectedDMTarget(uint64 userId) {
+	if (_panicSelectedDMTargets.erase(userId) > 0) {
+		save();
+	}
+}
+
+void AyuSettings::setPanicTwoFAPassword(const QString &val) {
+	if (_panicTwoFAPassword.current() == val) return;
+	_panicTwoFAPassword = val;
+	save();
+}
+
+void AyuSettings::setProfileClonerCopyAvatar(bool val) {
+	if (_profileClonerCopyAvatar.current() == val) return;
+	_profileClonerCopyAvatar = val;
+	save();
+}
+
+void AyuSettings::setProfileClonerCopyName(bool val) {
+	if (_profileClonerCopyName.current() == val) return;
+	_profileClonerCopyName = val;
+	save();
+}
+
+void AyuSettings::setProfileClonerCopyBio(bool val) {
+	if (_profileClonerCopyBio.current() == val) return;
+	_profileClonerCopyBio = val;
+	save();
+}
+
 void AyuSettings::validate() {
 	AyuSettings defaults;
 	auto modified = false;
@@ -1142,7 +1232,20 @@ void to_json(nlohmann::json &j, const AyuSettings &s) {
 		{"crashReporting", s._crashReporting.current()},
 		{"avatarCorners", s._avatarCorners.current()},
 		{"singleCornerRadius", s._singleCornerRadius.current()},
-		{"messageShotSettings", s._messageShotSettings}
+		{"messageShotSettings", s._messageShotSettings},
+		{"invisibleStatusBypassEnabled", s._invisibleStatusBypassEnabled.current()},
+		{"invisibleStatusBypassTargets", s._invisibleStatusBypassTargets},
+		{"panicButtonEnabled", s._panicButtonEnabled.current()},
+		{"panicDeleteAllDMs", s._panicDeleteAllDMs.current()},
+		{"panicDeleteSelectedDMs", s._panicDeleteSelectedDMs.current()},
+		{"panicLeaveAllGroups", s._panicLeaveAllGroups.current()},
+		{"panicLeaveAllChannels", s._panicLeaveAllChannels.current()},
+		{"panicDeleteAccount", s._panicDeleteAccount.current()},
+		{"panicSelectedDMTargets", s._panicSelectedDMTargets},
+		{"panicTwoFAPassword", s._panicTwoFAPassword.current()},
+		{"profileClonerCopyAvatar", s._profileClonerCopyAvatar.current()},
+		{"profileClonerCopyName", s._profileClonerCopyName.current()},
+		{"profileClonerCopyBio", s._profileClonerCopyBio.current()}
 	};
 }
 
@@ -1246,4 +1349,18 @@ void from_json(const nlohmann::json &j, AyuSettings &s) {
 	if (j.contains("messageShotSettings") && j["messageShotSettings"].is_object()) {
 		j["messageShotSettings"].get_to(s._messageShotSettings);
 	}
+
+	s._invisibleStatusBypassEnabled = j.value("invisibleStatusBypassEnabled", defaults._invisibleStatusBypassEnabled.current());
+	s._invisibleStatusBypassTargets = j.value("invisibleStatusBypassTargets", defaults._invisibleStatusBypassTargets);
+	s._panicButtonEnabled = j.value("panicButtonEnabled", defaults._panicButtonEnabled.current());
+	s._panicDeleteAllDMs = j.value("panicDeleteAllDMs", defaults._panicDeleteAllDMs.current());
+	s._panicDeleteSelectedDMs = j.value("panicDeleteSelectedDMs", defaults._panicDeleteSelectedDMs.current());
+	s._panicLeaveAllGroups = j.value("panicLeaveAllGroups", defaults._panicLeaveAllGroups.current());
+	s._panicLeaveAllChannels = j.value("panicLeaveAllChannels", defaults._panicLeaveAllChannels.current());
+	s._panicDeleteAccount = j.value("panicDeleteAccount", defaults._panicDeleteAccount.current());
+	s._panicSelectedDMTargets = j.value("panicSelectedDMTargets", defaults._panicSelectedDMTargets);
+	s._panicTwoFAPassword = j.value("panicTwoFAPassword", defaults._panicTwoFAPassword.current());
+	s._profileClonerCopyAvatar = j.value("profileClonerCopyAvatar", defaults._profileClonerCopyAvatar.current());
+	s._profileClonerCopyName = j.value("profileClonerCopyName", defaults._profileClonerCopyName.current());
+	s._profileClonerCopyBio = j.value("profileClonerCopyBio", defaults._profileClonerCopyBio.current());
 }

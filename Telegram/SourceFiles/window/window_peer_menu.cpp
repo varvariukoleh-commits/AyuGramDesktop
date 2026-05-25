@@ -1792,6 +1792,7 @@ void Filler::fillHistoryActions() {
 }
 
 void Filler::fillProfileActions() {
+	AyuUi::AddProfileClonerAction(_peer, _controller, _addAction);
 	addTTLSubmenu(true);
 	addSupportInfo();
 	addNewContact();

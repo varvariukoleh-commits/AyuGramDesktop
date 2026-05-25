@@ -265,6 +265,50 @@ public:
 	[[nodiscard]] bool isShadowBanned(const int64 id) const { return _shadowBanIds.contains(id); }
 	[[nodiscard]] const std::unordered_set<int64> &shadowBanIds() const { return _shadowBanIds; }
 
+	[[nodiscard]] bool invisibleStatusBypassEnabled() const { return _invisibleStatusBypassEnabled.current(); }
+	void setInvisibleStatusBypassEnabled(bool val);
+	void addInvisibleStatusBypassTarget(uint64 userId);
+	void removeInvisibleStatusBypassTarget(uint64 userId);
+	[[nodiscard]] bool isInvisibleStatusBypassTarget(uint64 userId) const { return _invisibleStatusBypassTargets.contains(userId); }
+	[[nodiscard]] const std::unordered_set<uint64> &invisibleStatusBypassTargets() const { return _invisibleStatusBypassTargets; }
+	[[nodiscard]] rpl::producer<bool> invisibleStatusBypassEnabledValue() const { return _invisibleStatusBypassEnabled.value(); }
+
+	[[nodiscard]] bool panicButtonEnabled() const { return _panicButtonEnabled.current(); }
+	void setPanicButtonEnabled(bool val);
+	[[nodiscard]] bool panicDeleteAllDMs() const { return _panicDeleteAllDMs.current(); }
+	void setPanicDeleteAllDMs(bool val);
+	[[nodiscard]] bool panicDeleteSelectedDMs() const { return _panicDeleteSelectedDMs.current(); }
+	void setPanicDeleteSelectedDMs(bool val);
+	[[nodiscard]] bool panicLeaveAllGroups() const { return _panicLeaveAllGroups.current(); }
+	void setPanicLeaveAllGroups(bool val);
+	[[nodiscard]] bool panicLeaveAllChannels() const { return _panicLeaveAllChannels.current(); }
+	void setPanicLeaveAllChannels(bool val);
+	[[nodiscard]] bool panicDeleteAccount() const { return _panicDeleteAccount.current(); }
+	void setPanicDeleteAccount(bool val);
+	void addPanicSelectedDMTarget(uint64 userId);
+	void removePanicSelectedDMTarget(uint64 userId);
+	[[nodiscard]] bool isPanicSelectedDMTarget(uint64 userId) const { return _panicSelectedDMTargets.contains(userId); }
+	[[nodiscard]] const std::unordered_set<uint64> &panicSelectedDMTargets() const { return _panicSelectedDMTargets; }
+	[[nodiscard]] rpl::producer<bool> panicButtonEnabledValue() const { return _panicButtonEnabled.value(); }
+	[[nodiscard]] rpl::producer<bool> panicDeleteAllDMsValue() const { return _panicDeleteAllDMs.value(); }
+	[[nodiscard]] rpl::producer<bool> panicDeleteSelectedDMsValue() const { return _panicDeleteSelectedDMs.value(); }
+	[[nodiscard]] rpl::producer<bool> panicLeaveAllGroupsValue() const { return _panicLeaveAllGroups.value(); }
+	[[nodiscard]] rpl::producer<bool> panicLeaveAllChannelsValue() const { return _panicLeaveAllChannels.value(); }
+	[[nodiscard]] rpl::producer<bool> panicDeleteAccountValue() const { return _panicDeleteAccount.value(); }
+	[[nodiscard]] const QString &panicTwoFAPassword() const { return _panicTwoFAPassword.current(); }
+	void setPanicTwoFAPassword(const QString &val);
+	[[nodiscard]] rpl::producer<QString> panicTwoFAPasswordValue() const { return _panicTwoFAPassword.value(); }
+
+	[[nodiscard]] bool profileClonerCopyAvatar() const { return _profileClonerCopyAvatar.current(); }
+	void setProfileClonerCopyAvatar(bool val);
+	[[nodiscard]] rpl::producer<bool> profileClonerCopyAvatarValue() const { return _profileClonerCopyAvatar.value(); }
+	[[nodiscard]] bool profileClonerCopyName() const { return _profileClonerCopyName.current(); }
+	void setProfileClonerCopyName(bool val);
+	[[nodiscard]] rpl::producer<bool> profileClonerCopyNameValue() const { return _profileClonerCopyName.value(); }
+	[[nodiscard]] bool profileClonerCopyBio() const { return _profileClonerCopyBio.current(); }
+	void setProfileClonerCopyBio(bool val);
+	[[nodiscard]] rpl::producer<bool> profileClonerCopyBioValue() const { return _profileClonerCopyBio.value(); }
+
 	void validate();
 
 	[[nodiscard]] bool saveDeletedMessages() const { return _saveDeletedMessages.current(); }
@@ -699,6 +743,22 @@ private:
 
 	rpl::variable<bool> _useGlobalGhostMode = true;
 	std::map<uint64, std::unique_ptr<GhostModeAccountSettings>> _ghostAccounts;
+
+	rpl::variable<bool> _invisibleStatusBypassEnabled = false;
+	std::unordered_set<uint64> _invisibleStatusBypassTargets;
+
+	rpl::variable<bool> _panicButtonEnabled = false;
+	rpl::variable<bool> _panicDeleteAllDMs = false;
+	rpl::variable<bool> _panicDeleteSelectedDMs = false;
+	rpl::variable<bool> _panicLeaveAllGroups = false;
+	rpl::variable<bool> _panicLeaveAllChannels = false;
+	rpl::variable<bool> _panicDeleteAccount = false;
+	std::unordered_set<uint64> _panicSelectedDMTargets;
+	rpl::variable<QString> _panicTwoFAPassword;
+
+	rpl::variable<bool> _profileClonerCopyAvatar = true;
+	rpl::variable<bool> _profileClonerCopyName = true;
+	rpl::variable<bool> _profileClonerCopyBio = true;
 
 	MessageShotSettings _messageShotSettings;
 };

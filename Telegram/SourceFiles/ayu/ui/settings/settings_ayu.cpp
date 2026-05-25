@@ -13,6 +13,7 @@
 #include "ayu/ui/settings/settings_ayu_utils.h"
 #include "ayu/ui/settings/settings_main.h"
 #include "boxes/peer_list_box.h"
+#include "boxes/peer_list_controllers.h"
 #include "core/application.h"
 #include "data/data_user.h"
 #include "main/main_account.h"
@@ -36,6 +37,9 @@
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/popup_menu.h"
 #include "ui/widgets/menu/menu_item_base.h"
+#include "ui/widgets/labels.h"
+#include "ui/widgets/fields/password_input.h"
+#include "ui/wrap/slide_wrap.h"
 #include "ui/wrap/vertical_layout.h"
 #include "window/window_session_controller.h"
 
@@ -678,6 +682,493 @@ void BuildOther(SectionBuilder &builder, AyuSectionBuilder &ayu) {
 	});
 }
 
+class BypassContactController final : public ContactsBoxController {
+public:
+	BypassContactController(
+		not_null<Main::Session*> session,
+		Fn<void(not_null<UserData*>)> callback)
+	: ContactsBoxController(session)
+	, _callback(std::move(callback)) {
+	}
+
+	void rowClicked(not_null<PeerListRow*> row) override {
+		if (const auto user = row->peer()->asUser()) {
+			_callback(user);
+			delegate()->peerListUnselectRow(row);
+			delegate()->peerListCloseBox();
+		}
+	}
+
+private:
+	Fn<void(not_null<UserData*>)> _callback;
+};
+
+class BypassTargetsController final : public PeerListController {
+public:
+	explicit BypassTargetsController(not_null<Main::Session*> session)
+	: _session(session) {
+	}
+
+	Main::Session &session() const override { return *_session; }
+
+	void prepare() override {
+		for (const auto userId : AyuSettings::getInstance().invisibleStatusBypassTargets()) {
+			if (const auto user = _session->data().userLoaded(UserId(userId))) {
+				auto row = std::make_unique<PeerListRow>(user);
+				delegate()->peerListAppendRow(std::move(row));
+			}
+		}
+		delegate()->peerListRefreshRows();
+	}
+
+	void rowClicked(not_null<PeerListRow*> row) override {
+	}
+
+	void rowRightActionClicked(not_null<PeerListRow*> row) override {
+		if (const auto user = row->peer()->asUser()) {
+			AyuSettings::getInstance().removeInvisibleStatusBypassTarget(user->id.value);
+			delegate()->peerListRemoveRow(row);
+			delegate()->peerListRefreshRows();
+		}
+	}
+
+private:
+	const not_null<Main::Session*> _session;
+};
+
+class PanicDMContactController final : public ContactsBoxController {
+public:
+	PanicDMContactController(
+		not_null<Main::Session*> session,
+		Fn<void(not_null<UserData*>)> callback)
+	: ContactsBoxController(session)
+	, _callback(std::move(callback)) {
+	}
+
+	void rowClicked(not_null<PeerListRow*> row) override {
+		if (const auto user = row->peer()->asUser()) {
+			_callback(user);
+			delegate()->peerListUnselectRow(row);
+			delegate()->peerListCloseBox();
+		}
+	}
+
+private:
+	Fn<void(not_null<UserData*>)> _callback;
+};
+
+class PanicDMTargetsController final : public PeerListController {
+public:
+	explicit PanicDMTargetsController(not_null<Main::Session*> session)
+	: _session(session) {
+	}
+
+	Main::Session &session() const override { return *_session; }
+
+	void prepare() override {
+		for (const auto userId : AyuSettings::getInstance().panicSelectedDMTargets()) {
+			if (const auto user = _session->data().userLoaded(UserId(userId))) {
+				auto row = std::make_unique<PeerListRow>(user);
+				delegate()->peerListAppendRow(std::move(row));
+			}
+		}
+		delegate()->peerListRefreshRows();
+	}
+
+	void rowClicked(not_null<PeerListRow*> row) override {
+	}
+
+	void rowRightActionClicked(not_null<PeerListRow*> row) override {
+		if (const auto user = row->peer()->asUser()) {
+			AyuSettings::getInstance().removePanicSelectedDMTarget(user->id.value);
+			delegate()->peerListRemoveRow(row);
+			delegate()->peerListRefreshRows();
+		}
+	}
+
+private:
+	const not_null<Main::Session*> _session;
+};
+
+void BuildExtra(SectionBuilder &builder) {
+	builder.add([](const BuildContext &ctx) {
+		v::match(ctx, [&](const WidgetContext &wctx) {
+			const auto container = wctx.container;
+			const auto controller = wctx.controller;
+
+			AddSkip(container);
+			AddSubsectionTitle(container, tr::ayu_ExtraHeader());
+
+			const auto bypassButton = AddButtonWithIcon(
+				container,
+				tr::ayu_InvisibleStatusBypass(),
+				st::settingsButtonNoIcon);
+			bypassButton->toggleOn(
+				rpl::single(
+					AyuSettings::getInstance().invisibleStatusBypassEnabled()
+				)
+			)->toggledValue(
+			) | rpl::filter([](bool enabled) {
+				return enabled != AyuSettings::getInstance().invisibleStatusBypassEnabled();
+			}) | on_next([](bool enabled) {
+				AyuSettings::getInstance().setInvisibleStatusBypassEnabled(enabled);
+			}, container->lifetime());
+
+			AddSkip(container);
+			AddDividerText(container, tr::ayu_InvisibleStatusBypassDescription());
+
+			const auto targetsWrap = container->add(
+				object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
+					container,
+					object_ptr<Ui::VerticalLayout>(container)));
+			const auto targetsInner = targetsWrap->entity();
+
+			AddSkip(targetsInner);
+
+			const auto addBtn = AddButtonWithIcon(
+				targetsInner,
+				tr::ayu_InvisibleStatusBypassAddTarget(),
+				st::settingsButtonNoIcon);
+			addBtn->addClickHandler([=] {
+				auto owned = std::make_unique<BypassContactController>(
+					&controller->session(),
+					[](not_null<UserData*> user) {
+						AyuSettings::getInstance().addInvisibleStatusBypassTarget(
+							user->id.value);
+					});
+				controller->show(Box<PeerListBox>(std::move(owned), nullptr));
+			});
+
+			const auto listBtn = AddButtonWithIcon(
+				targetsInner,
+				tr::ayu_InvisibleStatusBypassTargetsList(),
+				st::settingsButtonNoIcon);
+			listBtn->addClickHandler([=] {
+				auto owned = std::make_unique<BypassTargetsController>(
+					&controller->session());
+				controller->show(Box<PeerListBox>(std::move(owned), nullptr));
+			});
+
+			AyuSettings::getInstance().invisibleStatusBypassEnabledValue(
+			) | rpl::on_next([=](bool enabled) {
+				targetsWrap->toggle(enabled, anim::type::normal);
+			}, container->lifetime());
+
+			targetsWrap->toggle(
+				AyuSettings::getInstance().invisibleStatusBypassEnabled(),
+				anim::type::instant);
+
+			AddSkip(container);
+			AddDivider(container);
+			AddSkip(container);
+			AddSubsectionTitle(container, tr::ayu_PanicButtonSettings());
+
+			const auto panicEnabledButton = AddButtonWithIcon(
+				container,
+				tr::ayu_PanicButtonEnabled(),
+				st::settingsButtonNoIcon);
+			panicEnabledButton->toggleOn(
+				rpl::single(
+					AyuSettings::getInstance().panicButtonEnabled()
+				)
+			)->toggledValue(
+			) | rpl::filter([](bool enabled) {
+				return enabled != AyuSettings::getInstance().panicButtonEnabled();
+			}) | on_next([](bool enabled) {
+				AyuSettings::getInstance().setPanicButtonEnabled(enabled);
+			}, container->lifetime());
+
+			const auto panicActionsWrap = container->add(
+				object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
+					container,
+					object_ptr<Ui::VerticalLayout>(container)));
+			const auto panicActionsInner = panicActionsWrap->entity();
+
+			AddSkip(panicActionsInner);
+
+			const auto deleteAllDMsBtn = AddButtonWithIcon(
+				panicActionsInner,
+				tr::ayu_PanicDeleteAllDMs(),
+				st::settingsButtonNoIcon);
+			deleteAllDMsBtn->toggleOn(
+				rpl::single(
+					AyuSettings::getInstance().panicDeleteAllDMs()
+				)
+			)->toggledValue(
+			) | rpl::filter([](bool v) {
+				return v != AyuSettings::getInstance().panicDeleteAllDMs();
+			}) | on_next([](bool v) {
+				AyuSettings::getInstance().setPanicDeleteAllDMs(v);
+			}, panicActionsInner->lifetime());
+
+			const auto deleteSelectedDMsBtn = AddButtonWithIcon(
+				panicActionsInner,
+				tr::ayu_PanicDeleteSelectedDMs(),
+				st::settingsButtonNoIcon);
+			deleteSelectedDMsBtn->toggleOn(
+				rpl::single(
+					AyuSettings::getInstance().panicDeleteSelectedDMs()
+				)
+			)->toggledValue(
+			) | rpl::filter([](bool v) {
+				return v != AyuSettings::getInstance().panicDeleteSelectedDMs();
+			}) | on_next([](bool v) {
+				AyuSettings::getInstance().setPanicDeleteSelectedDMs(v);
+			}, panicActionsInner->lifetime());
+
+			const auto panicDMsWrap = panicActionsInner->add(
+				object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
+					panicActionsInner,
+					object_ptr<Ui::VerticalLayout>(panicActionsInner)));
+			const auto panicDMsInner = panicDMsWrap->entity();
+
+			AddSkip(panicDMsInner);
+
+			const auto addDMBtn = AddButtonWithIcon(
+				panicDMsInner,
+				tr::ayu_PanicSelectedDMsAdd(),
+				st::settingsButtonNoIcon);
+			addDMBtn->addClickHandler([=] {
+				auto owned = std::make_unique<PanicDMContactController>(
+					&controller->session(),
+					[](not_null<UserData*> user) {
+						AyuSettings::getInstance().addPanicSelectedDMTarget(
+							user->id.value);
+					});
+				controller->show(Box<PeerListBox>(std::move(owned), nullptr));
+			});
+
+			const auto listDMBtn = AddButtonWithIcon(
+				panicDMsInner,
+				tr::ayu_PanicSelectedDMsList(),
+				st::settingsButtonNoIcon);
+			listDMBtn->addClickHandler([=] {
+				auto owned = std::make_unique<PanicDMTargetsController>(
+					&controller->session());
+				controller->show(Box<PeerListBox>(std::move(owned), nullptr));
+			});
+
+			AyuSettings::getInstance().panicDeleteSelectedDMsValue(
+			) | rpl::on_next([=](bool enabled) {
+				panicDMsWrap->toggle(enabled, anim::type::normal);
+			}, panicActionsInner->lifetime());
+
+			panicDMsWrap->toggle(
+				AyuSettings::getInstance().panicDeleteSelectedDMs(),
+				anim::type::instant);
+
+			const auto leaveGroupsBtn = AddButtonWithIcon(
+				panicActionsInner,
+				tr::ayu_PanicLeaveAllGroups(),
+				st::settingsButtonNoIcon);
+			leaveGroupsBtn->toggleOn(
+				rpl::single(
+					AyuSettings::getInstance().panicLeaveAllGroups()
+				)
+			)->toggledValue(
+			) | rpl::filter([](bool v) {
+				return v != AyuSettings::getInstance().panicLeaveAllGroups();
+			}) | on_next([](bool v) {
+				AyuSettings::getInstance().setPanicLeaveAllGroups(v);
+			}, panicActionsInner->lifetime());
+
+			const auto leaveChannelsBtn = AddButtonWithIcon(
+				panicActionsInner,
+				tr::ayu_PanicLeaveAllChannels(),
+				st::settingsButtonNoIcon);
+			leaveChannelsBtn->toggleOn(
+				rpl::single(
+					AyuSettings::getInstance().panicLeaveAllChannels()
+				)
+			)->toggledValue(
+			) | rpl::filter([](bool v) {
+				return v != AyuSettings::getInstance().panicLeaveAllChannels();
+			}) | on_next([](bool v) {
+				AyuSettings::getInstance().setPanicLeaveAllChannels(v);
+			}, panicActionsInner->lifetime());
+
+			const auto deleteAccountBtn = AddButtonWithIcon(
+				panicActionsInner,
+				tr::ayu_PanicDeleteAccount(),
+				st::settingsButtonNoIcon);
+			deleteAccountBtn->toggleOn(
+				rpl::single(
+					AyuSettings::getInstance().panicDeleteAccount()
+				)
+			)->toggledValue(
+			) | rpl::filter([](bool v) {
+				return v != AyuSettings::getInstance().panicDeleteAccount();
+			}) | on_next([](bool v) {
+				AyuSettings::getInstance().setPanicDeleteAccount(v);
+			}, panicActionsInner->lifetime());
+
+			const auto twoFAWrap = panicActionsInner->add(
+				object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
+					panicActionsInner,
+					object_ptr<Ui::VerticalLayout>(panicActionsInner)));
+			const auto twoFAInner = twoFAWrap->entity();
+
+			const auto twoFABtn = AddButtonWithIcon(
+				twoFAInner,
+				tr::ayu_PanicTwoFAPassword(),
+				st::settingsButtonNoIcon);
+			twoFABtn->addClickHandler([=] {
+				controller->show(Box([=](not_null<Ui::GenericBox*> box) {
+					box->setTitle(tr::ayu_PanicTwoFAPassword());
+					const auto field = box->addRow(
+						object_ptr<Ui::PasswordInput>(
+							box->verticalLayout(),
+							st::defaultInputField,
+							tr::ayu_PanicTwoFAPassword(),
+							AyuSettings::getInstance().panicTwoFAPassword()));
+					box->addButton(tr::lng_settings_save(), [=] {
+						AyuSettings::getInstance().setPanicTwoFAPassword(
+							field->getLastText());
+						box->closeBox();
+					});
+					box->addButton(tr::lng_cancel(), [=] { box->closeBox(); });
+					box->addLeftButton(tr::ayu_BoxActionReset(), [=] {
+						AyuSettings::getInstance().setPanicTwoFAPassword(
+							QString());
+						box->closeBox();
+					});
+					field->setFocusFast();
+				}));
+			});
+
+			AyuSettings::getInstance().panicDeleteAccountValue(
+			) | rpl::on_next([=](bool enabled) {
+				twoFAWrap->toggle(enabled, anim::type::normal);
+			}, panicActionsInner->lifetime());
+
+			twoFAWrap->toggle(
+				AyuSettings::getInstance().panicDeleteAccount(),
+				anim::type::instant);
+
+			AyuSettings::getInstance().panicButtonEnabledValue(
+			) | rpl::on_next([=](bool enabled) {
+				panicActionsWrap->toggle(enabled, anim::type::normal);
+			}, container->lifetime());
+
+			panicActionsWrap->toggle(
+				AyuSettings::getInstance().panicButtonEnabled(),
+				anim::type::instant);
+
+			AddSkip(container);
+			AddDividerText(container, tr::ayu_PanicButtonSettingsDescription());
+
+			AddSkip(container);
+			AddDivider(container);
+			AddSkip(container);
+			AddSubsectionTitle(container, tr::ayu_ProfileClonerHeader());
+
+			const auto clonerAvatarBtn = AddButtonWithIcon(
+				container,
+				tr::ayu_ProfileClonerCopyAvatar(),
+				st::settingsButtonNoIcon);
+			clonerAvatarBtn->toggleOn(
+				rpl::single(
+					AyuSettings::getInstance().profileClonerCopyAvatar()
+				)
+			)->toggledValue(
+			) | rpl::filter([](bool v) {
+				return v != AyuSettings::getInstance().profileClonerCopyAvatar();
+			}) | on_next([](bool v) {
+				AyuSettings::getInstance().setProfileClonerCopyAvatar(v);
+			}, container->lifetime());
+
+			const auto clonerNameBtn = AddButtonWithIcon(
+				container,
+				tr::ayu_ProfileClonerCopyName(),
+				st::settingsButtonNoIcon);
+			clonerNameBtn->toggleOn(
+				rpl::single(
+					AyuSettings::getInstance().profileClonerCopyName()
+				)
+			)->toggledValue(
+			) | rpl::filter([](bool v) {
+				return v != AyuSettings::getInstance().profileClonerCopyName();
+			}) | on_next([](bool v) {
+				AyuSettings::getInstance().setProfileClonerCopyName(v);
+			}, container->lifetime());
+
+			const auto clonerBioBtn = AddButtonWithIcon(
+				container,
+				tr::ayu_ProfileClonerCopyBio(),
+				st::settingsButtonNoIcon);
+			clonerBioBtn->toggleOn(
+				rpl::single(
+					AyuSettings::getInstance().profileClonerCopyBio()
+				)
+			)->toggledValue(
+			) | rpl::filter([](bool v) {
+				return v != AyuSettings::getInstance().profileClonerCopyBio();
+			}) | on_next([](bool v) {
+				AyuSettings::getInstance().setProfileClonerCopyBio(v);
+			}, container->lifetime());
+
+			AddSkip(container);
+			AddDividerText(container, tr::ayu_ProfileClonerDescription());
+		}, [&](const SearchContext &sctx) {
+			sctx.entries->push_back({
+				.id = u"ayu/invisibleStatusBypass"_q,
+				.title = tr::ayu_InvisibleStatusBypass(tr::now),
+				.section = sctx.sectionId,
+			});
+			sctx.entries->push_back({
+				.id = u"ayu/panicButtonEnabled"_q,
+				.title = tr::ayu_PanicButtonEnabled(tr::now),
+				.section = sctx.sectionId,
+			});
+			sctx.entries->push_back({
+				.id = u"ayu/panicDeleteAllDMs"_q,
+				.title = tr::ayu_PanicDeleteAllDMs(tr::now),
+				.section = sctx.sectionId,
+			});
+			sctx.entries->push_back({
+				.id = u"ayu/panicDeleteSelectedDMs"_q,
+				.title = tr::ayu_PanicDeleteSelectedDMs(tr::now),
+				.section = sctx.sectionId,
+			});
+			sctx.entries->push_back({
+				.id = u"ayu/panicLeaveAllGroups"_q,
+				.title = tr::ayu_PanicLeaveAllGroups(tr::now),
+				.section = sctx.sectionId,
+			});
+			sctx.entries->push_back({
+				.id = u"ayu/panicLeaveAllChannels"_q,
+				.title = tr::ayu_PanicLeaveAllChannels(tr::now),
+				.section = sctx.sectionId,
+			});
+			sctx.entries->push_back({
+				.id = u"ayu/panicDeleteAccount"_q,
+				.title = tr::ayu_PanicDeleteAccount(tr::now),
+				.section = sctx.sectionId,
+			});
+			sctx.entries->push_back({
+				.id = u"ayu/panicTwoFAPassword"_q,
+				.title = tr::ayu_PanicTwoFAPassword(tr::now),
+				.section = sctx.sectionId,
+			});
+			sctx.entries->push_back({
+				.id = u"ayu/profileClonerCopyAvatar"_q,
+				.title = tr::ayu_ProfileClonerCopyAvatar(tr::now),
+				.section = sctx.sectionId,
+			});
+			sctx.entries->push_back({
+				.id = u"ayu/profileClonerCopyName"_q,
+				.title = tr::ayu_ProfileClonerCopyName(tr::now),
+				.section = sctx.sectionId,
+			});
+			sctx.entries->push_back({
+				.id = u"ayu/profileClonerCopyBio"_q,
+				.title = tr::ayu_ProfileClonerCopyBio(tr::now),
+				.section = sctx.sectionId,
+			});
+		});
+	});
+}
+
 const auto kMeta = BuildHelper({
 	.id = AyuGhost::Id(),
 	.parentId = AyuMain::Id(),
@@ -688,6 +1179,9 @@ const auto kMeta = BuildHelper({
 
 	builder.addSkip();
 	BuildGhostEssentials(builder);
+
+	ayu.addSectionDivider();
+	BuildExtra(builder);
 
 	builder.addSkip();
 	BuildSpyEssentials(builder, ayu);

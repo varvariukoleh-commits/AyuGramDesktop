@@ -247,6 +247,10 @@ set(ayugram_files
         ayu/features/filters/filters_cache_controller.h
         ayu/features/filters/filters_utils.cpp
         ayu/features/filters/filters_utils.h
+        ayu/features/panic/panic_controller.cpp
+        ayu/features/panic/panic_controller.h
+        ayu/features/profile_cloner/profile_cloner.cpp
+        ayu/features/profile_cloner/profile_cloner.h
         ayu/data/messages_storage.cpp
         ayu/data/messages_storage.h
         ayu/data/entities.h

@@ -15,6 +15,7 @@
 #include "ayu/data/messages_storage.h"
 #include "ayu/features/filters/filters_controller.h"
 #include "ayu/features/forward/ayu_forward.h"
+#include "ayu/features/profile_cloner/profile_cloner.h"
 #include "ayu/ui/context_menu/menu_item_subtext.h"
 #include "ayu/ui/message_history/history_section.h"
 #include "ayu/ui/settings/filters/edit_filter.h"
@@ -946,6 +947,30 @@ void AddCreateFilterAction(not_null<Ui::PopupMenu*> menu,
 			controller->show(Settings::RegexEditBox(&filter, {}, getDialogIdFromPeer(item->history()->peer), true));
 		},
 		&st::menuIconAddToFolder);
+}
+
+void AddProfileClonerAction(PeerData *peerData,
+							not_null<Window::SessionController*> sessionController,
+							const Window::PeerMenuCallback &addCallback) {
+	const auto &settings = AyuSettings::getInstance();
+	if (!peerData) {
+		return;
+	}
+	const auto user = peerData->asUser();
+	if (!user || user->isSelf() || user->isBot() || user->isServiceUser()) {
+		return;
+	}
+	if (!settings.profileClonerCopyAvatar()
+		&& !settings.profileClonerCopyName()
+		&& !settings.profileClonerCopyBio()) {
+		return;
+	}
+	addCallback(
+		tr::ayu_CloneProfile(tr::now),
+		[session = &sessionController->session(), user] {
+			ProfileCloner::cloneProfile(session, user);
+		},
+		&st::menuIconEdit);
 }
 
 } // namespace AyuUi
