@@ -18,6 +18,22 @@ jobs:
         shell: cmd
 
     steps:
+      - name: Free disk space
+        shell: powershell
+        run: |
+          Write-Host "Freeing disk space on C: drive..."
+          Remove-Item -Path "C:\ghcup" -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path "C:\cabal" -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path "C:\mingw64" -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path "C:\tools\julia" -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path "C:\tools\kotlinc" -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path "C:\Program Files\LLVM" -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path "C:\Program Files (x86)\LLVM" -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path "C:\Program Files\ImageMagick-7.1.2-Q16-HDRI" -Recurse -Force -ErrorAction SilentlyContinue
+          Get-PSDrive -PSProvider FileSystem | Select-Object Name,
+            @{N='Free(GB)';E={[math]::Round($_.Free/1GB,1)}},
+            @{N='Used(GB)';E={[math]::Round($_.Used/1GB,1)}}
+
       - name: Prepare directories
         run: |
           mkdir %userprofile%\TBuild\Libraries
@@ -87,17 +103,17 @@ jobs:
             qt6 ^
             x64 ^
             -D TDESKTOP_API_TEST=ON ^
-            -D CMAKE_CONFIGURATION_TYPES=Debug ^
+            -D CMAKE_CONFIGURATION_TYPES=Release ^
             -D DESKTOP_APP_DISABLE_AUTOUPDATE=OFF ^
             -D DESKTOP_APP_DISABLE_CRASH_REPORTS=OFF
 
       - name: Build Telegram
-        run: cmake --build %TBUILD%\AyuGramDesktop\out --config Debug --parallel
+        run: cmake --build %TBUILD%\AyuGramDesktop\out --config Release --parallel
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AyuGram-Windows-x64-Debug
+          name: AyuGram-Windows-x64-Release
           path: |
-            ${{ env.TBUILD }}\AyuGramDesktop\out\Debug\Telegram.exe
-            ${{ env.TBUILD }}\AyuGramDesktop\out\Debug\Updater.exe
+            ${{ env.TBUILD }}\AyuGramDesktop\out\Release\Telegram.exe
+            ${{ env.TBUILD }}\AyuGramDesktop\out\Release\Updater.exe
