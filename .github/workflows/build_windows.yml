@@ -97,7 +97,7 @@ jobs:
         env:
           QT: '6.11.0'
         run: |
-          cmake %TBUILD%\AyuGramDesktop\Telegram ^
+          cmake %TBUILD%\AyuGramDesktop ^
             -B D:\out ^
             -G "Visual Studio 17 2022" ^
             -A x64 ^
