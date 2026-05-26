@@ -1,27 +1,21 @@
 name: Windows Build
-
 on:
   push:
     branches: [dev]
   workflow_dispatch:
-
 jobs:
   windows:
     name: Windows x64
     runs-on: windows-latest
-
     env:
       PREPARE_PATH: "Telegram/build/prepare/prepare.py"
-
     defaults:
       run:
         shell: cmd
-
     steps:
       - name: Free disk space
         shell: powershell
         run: |
-          Write-Host "Freeing disk space on C: drive..."
           Remove-Item -Path "C:\ghcup" -Recurse -Force -ErrorAction SilentlyContinue
           Remove-Item -Path "C:\cabal" -Recurse -Force -ErrorAction SilentlyContinue
           Remove-Item -Path "C:\mingw64" -Recurse -Force -ErrorAction SilentlyContinue
@@ -30,9 +24,14 @@ jobs:
           Remove-Item -Path "C:\Program Files\LLVM" -Recurse -Force -ErrorAction SilentlyContinue
           Remove-Item -Path "C:\Program Files (x86)\LLVM" -Recurse -Force -ErrorAction SilentlyContinue
           Remove-Item -Path "C:\Program Files\ImageMagick-7.1.2-Q16-HDRI" -Recurse -Force -ErrorAction SilentlyContinue
-          Get-PSDrive -PSProvider FileSystem | Select-Object Name,
-            @{N='Free(GB)';E={[math]::Round($_.Free/1GB,1)}},
-            @{N='Used(GB)';E={[math]::Round($_.Used/1GB,1)}}
+          Remove-Item -Path "C:\Program Files\Microsoft SQL Server" -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path "C:\Program Files (x86)\Microsoft SQL Server" -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path "C:\Program Files\MongoDB" -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path "C:\Program Files (x86)\Android" -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path "C:\Android" -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path "C:\Strawberry" -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path "C:\local" -Recurse -Force -ErrorAction SilentlyContinue
+          Get-PSDrive -PSProvider FileSystem | Select-Object Name, @{N='Free(GB)';E={[math]::Round($_.Free/1GB,1)}}, @{N='Used(GB)';E={[math]::Round($_.Used/1GB,1)}}
 
       - name: Prepare directories
         run: |
@@ -52,8 +51,6 @@ jobs:
         run: |
           echo "$(sha256sum $TBUILD/AyuGramDesktop/$PREPARE_PATH | awk '{ print $1 }')" > CACHE_KEY.txt
           echo "CACHE_KEY=$(sha256sum CACHE_KEY.txt | awk '{ print $1 }')" >> $GITHUB_ENV
-          git config --global user.email "ci@ayugram.dev"
-          git config --global user.name "AyuGram CI"
 
       - uses: Eden-CI/msvc-dev-cmd@master
         name: Setup MSVC x64
@@ -97,23 +94,27 @@ jobs:
           %TBUILD%\AyuGramDesktop\Telegram\build\prepare\win.bat skip-release silent qt6
 
       - name: Configure
+        env:
+          QT: '6.11.0'
         run: |
-          cd %TBUILD%\AyuGramDesktop\Telegram
-          call configure.bat ^
-            qt6 ^
-            x64 ^
+          cmake %TBUILD%\AyuGramDesktop\Telegram ^
+            -B D:\out ^
+            -G "Visual Studio 17 2022" ^
+            -A x64 ^
+            -T v143 ^
             -D TDESKTOP_API_TEST=ON ^
-            -D CMAKE_CONFIGURATION_TYPES=Release ^
+            -D CMAKE_CONFIGURATION_TYPES=Debug ^
             -D DESKTOP_APP_DISABLE_AUTOUPDATE=OFF ^
-            -D DESKTOP_APP_DISABLE_CRASH_REPORTS=OFF
+            -D DESKTOP_APP_DISABLE_CRASH_REPORTS=OFF ^
+            -D CMAKE_DISABLE_PRECOMPILE_HEADERS=ON
 
       - name: Build Telegram
-        run: cmake --build %TBUILD%\AyuGramDesktop\out --config Release --parallel
+        run: cmake --build D:\out --config Debug --parallel
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AyuGram-Windows-x64-Release
+          name: AyuGram-Windows-x64-Debug
           path: |
-            ${{ env.TBUILD }}\AyuGramDesktop\out\Release\Telegram.exe
-            ${{ env.TBUILD }}\AyuGramDesktop\out\Release\Updater.exe
+            D:\out\Debug\Telegram.exe
+            D:\out\Debug\Updater.exe
