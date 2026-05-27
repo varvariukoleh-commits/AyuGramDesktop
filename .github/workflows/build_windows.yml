@@ -103,8 +103,7 @@ jobs:
             -D CMAKE_CONFIGURATION_TYPES=Debug ^
             -D DESKTOP_APP_DISABLE_AUTOUPDATE=OFF ^
             -D DESKTOP_APP_DISABLE_CRASH_REPORTS=OFF ^
-            "-DCMAKE_CXX_FLAGS_DEBUG=/MDd /Z7 /Ob0 /Od /RTC1" ^
-            "-DCMAKE_C_FLAGS_DEBUG=/MDd /Z7 /Ob0 /Od /RTC1"
+            -D CMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded
 
       - name: Build Telegram
         run: cmake --build %TBUILD%\AyuGramDesktop\out --config Debug --parallel 2
