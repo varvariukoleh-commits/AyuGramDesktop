@@ -102,10 +102,11 @@ jobs:
             -D TDESKTOP_API_TEST=ON ^
             -D CMAKE_CONFIGURATION_TYPES=Debug ^
             -D DESKTOP_APP_DISABLE_AUTOUPDATE=OFF ^
-            -D DESKTOP_APP_DISABLE_CRASH_REPORTS=OFF
+            -D DESKTOP_APP_DISABLE_CRASH_REPORTS=OFF ^
+            -D CMAKE_CXX_FLAGS=/FS
 
       - name: Build Telegram
-        run: cmake --build %TBUILD%\AyuGramDesktop\out --config Debug --parallel
+        run: cmake --build %TBUILD%\AyuGramDesktop\out --config Debug --parallel 2
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
