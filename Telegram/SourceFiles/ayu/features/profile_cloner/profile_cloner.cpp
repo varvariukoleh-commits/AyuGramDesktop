@@ -47,7 +47,7 @@ void cloneProfile(not_null<Main::Session*> session, not_null<UserData*> user) {
 		const auto image = user->userpicCloudImage(view);
 		if (image && !image->isNull()) {
 			session->api().peerPhoto().upload(
-				session->data().self(),
+				session->user(),
 				Api::PeerPhoto::UserPhoto{.image = *image});
 		}
 	}
