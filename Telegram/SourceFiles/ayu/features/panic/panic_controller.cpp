@@ -17,11 +17,13 @@
 #include "data/data_session.h"
 #include "data/data_user.h"
 #include "dialogs/dialogs_main_list.h"
+#include "history/history.h"
 #include "lang_auto.h"
 #include "main/main_session.h"
 #include "styles/style_widgets.h"
 #include "ui/layers/generic_box.h"
 #include "ui/widgets/fields/password_input.h"
+#include "ui/wrap/wrap.h"
 #include "window/window_controller.h"
 
 namespace PanicController {
@@ -69,11 +71,14 @@ void promptForTwoFAAndDelete(not_null<Main::Session*> session) {
 	}
 	window->show(Box([session = session.get()](not_null<Ui::GenericBox*> box) {
 		box->setTitle(tr::ayu_PanicTwoFAPassword());
-		const auto field = box->addRow(
-			object_ptr<Ui::PasswordInput>(
-				box->verticalLayout(),
-				st::defaultInputField,
-				tr::ayu_PanicTwoFAPassword()));
+		auto fieldObj = object_ptr<Ui::PasswordInput>(
+			box->verticalLayout(),
+			st::defaultInputField,
+			tr::ayu_PanicTwoFAPassword());
+		const auto field = fieldObj.data();
+		box->addRow(object_ptr<Ui::Wrap<Ui::PasswordInput>>(
+			box->verticalLayout(),
+			std::move(fieldObj)));
 		box->addButton(tr::ayu_PanicDeleteAccount(), [=] {
 			const auto password = field->getLastText();
 			if (password.isEmpty()) {
