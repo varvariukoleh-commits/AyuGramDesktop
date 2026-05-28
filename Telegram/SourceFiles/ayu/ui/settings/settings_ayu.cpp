@@ -15,10 +15,12 @@
 #include "boxes/peer_list_box.h"
 #include "boxes/peer_list_controllers.h"
 #include "core/application.h"
+#include "data/data_session.h"
 #include "data/data_user.h"
 #include "main/main_account.h"
 #include "main/main_domain.h"
 #include "main/main_session.h"
+#include "main/session/session_show.h"
 #include "settings/settings_builder.h"
 #include "settings/settings_common.h"
 #include "styles/style_ayu_icons.h"
@@ -41,6 +43,7 @@
 #include "ui/widgets/fields/password_input.h"
 #include "ui/wrap/slide_wrap.h"
 #include "ui/wrap/vertical_layout.h"
+#include "ui/wrap/wrap.h"
 #include "window/window_session_controller.h"
 
 namespace Settings {
@@ -694,8 +697,7 @@ public:
 	void rowClicked(not_null<PeerListRow*> row) override {
 		if (const auto user = row->peer()->asUser()) {
 			_callback(user);
-			delegate()->peerListUnselectRow(row);
-			delegate()->peerListCloseBox();
+			delegate()->peerListUiShow()->hideLayer();
 		}
 	}
 
@@ -748,8 +750,7 @@ public:
 	void rowClicked(not_null<PeerListRow*> row) override {
 		if (const auto user = row->peer()->asUser()) {
 			_callback(user);
-			delegate()->peerListUnselectRow(row);
-			delegate()->peerListCloseBox();
+			delegate()->peerListUiShow()->hideLayer();
 		}
 	}
 
@@ -1015,12 +1016,15 @@ void BuildExtra(SectionBuilder &builder) {
 			twoFABtn->addClickHandler([=] {
 				controller->show(Box([=](not_null<Ui::GenericBox*> box) {
 					box->setTitle(tr::ayu_PanicTwoFAPassword());
-					const auto field = box->addRow(
-						object_ptr<Ui::PasswordInput>(
-							box->verticalLayout(),
-							st::defaultInputField,
-							tr::ayu_PanicTwoFAPassword(),
-							AyuSettings::getInstance().panicTwoFAPassword()));
+					auto fieldObj = object_ptr<Ui::PasswordInput>(
+						box->verticalLayout(),
+						st::defaultInputField,
+						tr::ayu_PanicTwoFAPassword(),
+						AyuSettings::getInstance().panicTwoFAPassword());
+					const auto field = fieldObj.data();
+					box->addRow(object_ptr<Ui::Wrap<Ui::PasswordInput>>(
+						box->verticalLayout(),
+						std::move(fieldObj)));
 					box->addButton(tr::lng_settings_save(), [=] {
 						AyuSettings::getInstance().setPanicTwoFAPassword(
 							field->getLastText());
