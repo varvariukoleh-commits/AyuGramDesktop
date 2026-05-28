@@ -46,6 +46,11 @@ jobs:
           submodules: recursive
           path: ${{ env.TBUILD }}\AyuGramDesktop
 
+      - name: Redirect build output to D drive
+        run: |
+          mkdir D:\out
+          mklink /j %TBUILD%\AyuGramDesktop\out D:\out
+
       - name: Compute cache key
         shell: bash
         run: |
